@@ -1,0 +1,68 @@
+# ============ SpecFem2D Par_file ============
+title                           = PINN_acoustic_2src
+
+# ---------- simulation type ----------
+SIMULATION_TYPE                 = 1
+NOISE_TOMOGRAPHY                = 0
+SAVE_FORWARD                    = .false.
+
+# ---------- time ----------
+nstep                           = 14000
+DT                              = 5e-05
+
+# ---------- mesh ----------
+PARTITIONING_TYPE               = 3
+ngnod                           = 9
+initialfield                    = .false.
+add_Biot_absorption             = .false.
+
+# ---------- seismograms ----------
+seismotype                      = 1
+NTSTEP_BETWEEN_OUTPUT_SEISMOS   = 14000
+save_ASCII_seismograms          = .true.
+save_binary_seismograms_single  = .false.
+save_binary_seismograms_double  = .false.
+SU_FORMAT                       = .false.
+subsamp_seismos                 = 1
+USE_TRICK_FOR_BETTER_PRESSURE   = .false.
+NTSTEP_BETWEEN_OUTPUT_INFO      = 2000
+
+# ---------- wavefields ----------
+output_wavefield_dumps          = .true.
+NTSTEP_BETWEEN_OUTPUT_WAVE_DUMPS= 100
+use_binary_for_wavefield_dumps  = 0
+imagetype_wavefield_dumps       = 1
+
+# ---------- images (off) ----------
+output_color_image              = .false.
+output_postscript_snapshot      = .false.
+NTSTEP_BETWEEN_OUTPUT_IMAGES    = 2000
+cutsnaps                        = 1.
+
+# ---------- mesh from internal mesher ----------
+read_external_mesh              = .false.
+
+# ---------- absorbing boundaries ----------
+STACEY_ABSORBING_CONDITIONS     = .false.
+PML_BOUNDARY_CONDITIONS         = .true.
+NELEM_PML_THICKNESS             = 10
+ROTATE_PML_ACTIVATE             = .false.
+rotate_PML_angle                = 0.
+
+# ---------- receivers ----------
+use_existing_STATIONS           = .true.
+
+# ---------- P-SV ----------
+P_SV                            = .true.
+
+# ---------- attenuation (off) ----------
+ATTENUATION_VISCOACOUSTIC       = .false.
+ATTENUATION_VISCOELASTIC        = .false.
+Q0                              = 1.
+freq0                           = 20.0
+UNDO_ATTENUATION_AND_OR_PML     = .false.
+NT_DUMP_ATTENUATION             = 500
+
+# ---------- misc ----------
+TURN_ANISOTROPY_ON              = .false.
+GPU_MODE                        = .false.

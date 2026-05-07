@@ -1,0 +1,27 @@
+# SpecFem2D Mesh_Par_file — 2 materials, 5 regions
+
+# Interfaces file (simple box)
+INTERFACES_FILE                 = interfaces.dat
+
+# Number of materials
+nbmodels                        = 2
+
+# Material format (15 fields):
+# model_number  type  rho  vp  vs  0  0  0  0  0  0  0  0  QKappa  Qmu
+# type=1 → isotropic; vs=0 → acoustic
+1  1  2700.0  3000.0  0.0  0  0  0  0  0  0  0  0  9999.  9999.
+2  1  2700.0  2000.0  0.0  0  0  0  0  0  0  0  0  9999.  9999.
+
+# Mesh dimensions
+nx_sem                          = 150
+nz_sem                          = 50
+
+# Number of regions
+nregions                        = 5
+# ix_min  ix_max  iz_min  iz_max  material_number
+1  150  1  15  1
+1  150  37  50  1
+1  55  16  36  1
+56  96  16  36  2
+97  150  16  36  1
+

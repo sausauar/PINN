@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Training artifacts
+checkpoints/
+checkpoints_smoke/
+*.ckpt*
+checkpoint
+loss_history_data.csv
+run_parameters.json
+recorded_weights.pickle
+
+# Generated images and reports
+*.png
+*.jpg
+*.jpeg
+*.pdf
+
+# Logs
+*.log
+nohup.out
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

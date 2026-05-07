@@ -1,0 +1,16 @@
+# Number of interfaces
+2
+
+# Interface 1 — bottom (z=0)
+2
+0.0d0  0.d0
+1500.0d0  0.d0
+
+# Interface 2 — top / free surface (z=500.0)
+2
+0.0d0  500.0d0
+1500.0d0  500.0d0
+
+# nb of spectral elements in Z for the single layer between the two interfaces
+50
+

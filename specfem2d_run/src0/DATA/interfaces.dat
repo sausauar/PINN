@@ -1,0 +1,16 @@
+# Number of interfaces (= number of horizontal layers + 1)
+2
+
+# Interface 1 — bottom (z=0)
+2
+0.d0  0.d0
+1500.0d0  0.d0
+
+# Interface 2 — top / free surface (z=500.0)
+2
+0.d0  500.0d0
+1500.0d0  500.0d0
+
+# Number of spectral elements in each layer (between interfaces 1 and 2)
+1
+150  50  1
