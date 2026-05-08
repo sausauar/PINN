@@ -35,8 +35,8 @@ with tf.GradientTape() as tape_w:
     grad_phi = tape_ic.gradient(phi, inputs)
     loss_ic = tf.reduce_mean(tf.square(grad_phi[:, 0:1] - target_grad))
 
-grads_A = tape_w.gradient(loss_ic, model.trainable_variables, unconnected_gradients=tf.UnconnectedGradients.ZERO)
-norms_A = [tf.norm(g).numpy() for g in grads_A]
+grads_A = tape_w.gradient(loss_ic, model.trainable_variables)
+norms_A = [tf.norm(g).numpy() if g is not None else 0.0 for g in grads_A]
 print(f"Method A (tape inside tape_weights):")
 print(f"  loss = {loss_ic.numpy():.4f}")
 print(f"  grad norms W1={norms_A[0]:.4e}  b1={norms_A[1]:.4e}  W2={norms_A[2]:.4e}  b2={norms_A[3]:.4e}")
@@ -65,8 +65,8 @@ with tf.GradientTape() as tape_w3:
     grad_phi3 = tape_ic3.gradient(phi3, inputs)  # called INSIDE tape_w3 but AFTER tape_ic3 exits
     loss_ic3 = tf.reduce_mean(tf.square(grad_phi3[:, 0:1] - target_grad))
 
-grads_C = tape_w3.gradient(loss_ic3, model.trainable_variables, unconnected_gradients=tf.UnconnectedGradients.ZERO)
-norms_C = [tf.norm(g).numpy() for g in grads_C]
+grads_C = tape_w3.gradient(loss_ic3, model.trainable_variables)
+norms_C = [tf.norm(g).numpy() if g is not None else 0.0 for g in grads_C]
 print(f"Method C (tape exited before .gradient() call - current code):")
 print(f"  loss = {loss_ic3.numpy():.4f}")
 print(f"  grad norms W1={norms_C[0]:.4e}  b1={norms_C[1]:.4e}  W2={norms_C[2]:.4e}  b2={norms_C[3]:.4e}")

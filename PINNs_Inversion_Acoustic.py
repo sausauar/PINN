@@ -246,7 +246,7 @@ else:
     chunk_size_runtime = min(chunk_size_runtime, 1000, batch_size)
 
 if args.fast:
-    print('Fast mode ON, num_epoch=200 (РґР»СЏ Р±С‹СЃС‚СЂРѕР№ РїСЂРѕРІРµСЂРєРё)')
+    print('Fast mode ON, num_epoch=200 (для быстрой проверки)')
     num_epoch = 200
 
 # ── Параметры домена (совпадают с generate_data_2src.py) ──────
@@ -274,26 +274,26 @@ rho = 1.0
 Lx=3.0;#this is for scaling the wavespeed in the PDE via saling x coordinate
 Lz=3.0;#this is for scaling the wavespeed in the PDE via scaling z coordinate
 
-# ── Границы инверсионного прямоугольника (вокруг эллипса) ────
-# Эллипс: cx=0.75, cz=0.25, rx=0.20, rz=0.10
+# ── Границы инверсионного прямоугольника (Case 4) ────
 z_st = 0.10   # km
 z_fi = 0.42   # km
 x_st = 0.45   # km
 x_fi = 1.05   # km
-lld_smooth = 20.0
+lld_smooth = 60.0  # Sharper mask for rectangular anomaly
 
-# ── Истинная скоростная модель (эллипс, только для графиков) ──
+# ── Истинная скоростная модель (Прямоугольник, как в Specfem) ──
 ALPHA_BG   = 3.0   # km/s фон
 ALPHA_ANOM = 2.0   # km/s аномалия
-ELL_CX, ELL_CZ = 0.75, 0.25
-ELL_RX, ELL_RZ = 0.20, 0.10
+# Anomaly elements ix=[56..96], iz=[16..36] -> [0.55..0.96]km, [0.15..0.36]km
+REC_X_ST, REC_X_FI = 0.55, 0.96
+REC_Z_ST, REC_Z_FI = 0.15, 0.36
 
 def compute_alpha_true_numpy(xx, zz):
     x_vals = xx * Lx
     z_vals = zz * Lz
     alpha = np.full_like(x_vals, ALPHA_BG, dtype=np.float64)
-    mask = ((x_vals - ELL_CX)**2 / ELL_RX**2 +
-            (z_vals - ELL_CZ)**2 / ELL_RZ**2) <= 1.0
+    mask = (x_vals >= REC_X_ST) & (x_vals <= REC_X_FI) & \
+           (z_vals >= REC_Z_ST) & (z_vals <= REC_Z_FI)
     alpha[mask] = ALPHA_ANOM
     return alpha
 
@@ -483,13 +483,13 @@ def compute_velocity_with_mask(x, z, alpha_star, z_st, z_fi, x_st, x_fi, Lx, Lz,
     alpha_bound = z_low_mask * z_high_mask * x_low_mask * x_high_mask
     
     # Final velocity = layered background + bounded perturbation inside inversion box.
-    # FIXED: coefficient 0.6 → 1.0 so alpha can reach 2.0 km/s (anomaly target).
-    # With 0.6: range was [2.4, 3.6] km/s — anomaly at 2.0 was UNREACHABLE!
-    # With 1.0: range is  [2.0, 4.0] km/s — correct.
+    # FIXED: coefficient 1.0 -> 1.2 to allow reaching 2.0 km/s more easily without saturation
+    # alpha_base is 3.0. alpha = 3.0 + 1.2 * alpha_star.
+    # For target 2.0: 1.2 * alpha_star = -1.0 -> alpha_star = -0.83 (well within tanh range)
     x_phys = x * Lx
     z_phys = z * Lz
     alpha_base = layered_velocity_tf(x_phys, z_phys)
-    alpha = alpha_base + 1.0 * alpha_star * alpha_bound
+    alpha = alpha_base + 1.2 * alpha_star * alpha_bound
     alpha = tf.clip_by_value(alpha, 1.2, 4.5)
     
     return alpha, alpha_bound
@@ -897,9 +897,9 @@ smsz = [f for f in sms if 'BXZ' in f]  # Z-компонента: AA.S000N.BXZ.se
 seismo_listz = [np.loadtxt('event1/seismograms/'+f) for f in smsz]  # Z cmp seismos
 print(f'[DATA] Z-seismogram files found for event1: {len(smsz)} stations')
 
-t_spec=-seismo_listz[0][0,0]+seismo_listz[0][:,0]#specfem's time doesn't start from zero for the seismos, so we shift it forward to zero
-cut_u=t_spec>t_s#here we include only part of the seismograms from specfem that are within PINNs' training time domain which is [t_st t_m]
-cut_l=t_spec<t_st#Cutting the seismograms to only after the time the first snapshot from specfem is used for PINNs
+t_spec = seismo_listz[0][:,0] + 0.06  # Simulation time T_sim (accounts for tshift=0.06 in Specfem)
+cut_u = t_spec > t_s
+cut_l = t_spec < t_st
 l_su=len(cut_u)-sum(cut_u)#this is the index of the time axis in specfem after which t>t_m
 l_sl=sum(cut_l)
 
@@ -983,6 +983,7 @@ seismo_listx = [np.loadtxt('event1/seismograms/'+f) for f in smsx]  # X cmp seis
 print(f'[DATA] X-seismogram files found for event1: {len(smsx)} stations')
 
 
+# Use the same index for X component
 for ii in range(len(seismo_listx)):
     seismo_listx[ii]=seismo_listx[ii][index]
 

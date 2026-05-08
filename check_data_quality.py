@@ -32,11 +32,11 @@ sponge_cells = 15
 fd_dz     = 0.005
 z_seis_phys = az - (sponge_cells + 2) * fd_dz   # ≈ 0.415 km
 
-# Аномалия (эллипс)
+# Аномалия (Прямоугольник Case 4)
 ALPHA_BG   = 3.0
 ALPHA_ANOM = 2.0
-ELL_CX, ELL_CZ = 0.75, 0.25
-ELL_RX, ELL_RZ = 0.20, 0.10
+REC_X_ST, REC_X_FI = 0.55, 0.96
+REC_Z_ST, REC_Z_FI = 0.15, 0.36
 
 # Инверсионное окно
 z_st_box, z_fi_box = 0.10, 0.42
@@ -141,7 +141,7 @@ for ev in range(1, n_event+1):
     slx_raw = [np.loadtxt(f'{sm_dir}/{f}') for f in bxx]
 
     if index is None:
-        t_spec = -slz_raw[0][0,0] + slz_raw[0][:,0]
+        t_spec = slz_raw[0][:,0] + 0.06  # Physical time (accounts for tshift=0.06)
         cut_u  = t_spec > t_s
         cut_l  = t_spec < t_st
         l_su   = len(cut_u) - sum(cut_u)
@@ -195,25 +195,26 @@ mark('disp_scale_valid', disp_scale > 1e-20,
 # ── 4. Волновое поле покрывает аномалию? ─────────────────────────────
 print("\n[4] WAVEFIELD COVERAGE OF ANOMALY")
 
-# Индексы точек сетки внутри эллипса
+# Индексы точек сетки внутри прямоугольника
 xg_phys = xxzzs[:,0] * Lx
 zg_phys = xxzzs[:,1] * Lz
-inside_ell = ((xg_phys - ELL_CX)**2 / ELL_RX**2 +
-              (zg_phys - ELL_CZ)**2 / ELL_RZ**2) <= 1.0
-n_inside = inside_ell.sum()
+inside_anom = (xg_phys >= REC_X_ST) & (xg_phys <= REC_X_FI) & \
+              (zg_phys >= REC_Z_ST) & (zg_phys <= REC_Z_FI)
+n_inside = inside_anom.sum()
 mark('anomaly_grid_points', n_inside > 10,
-     f'{n_inside} grid points inside ellipse anomaly')
+     f'{n_inside} grid points inside rectangular anomaly')
 
-U_total_ic1 = np.sqrt(U_ini1x**2 + U_ini1z**2).ravel()
-amp_inside_ic1  = U_total_ic1[inside_ell]
-amp_outside_ic1 = U_total_ic1[~inside_ell]
+# Use IC2 (t=0.20) because IC1 (t=0.10) might not have reached the anomaly yet
+U_total_ic2 = np.sqrt(U_ini2x**2 + U_ini2z**2).ravel()
+amp_inside_ic2  = U_total_ic2[inside_anom]
+amp_outside_ic2 = U_total_ic2[~inside_anom]
 
-rms_in  = rms(amp_inside_ic1)
-rms_out = rms(amp_outside_ic1)
+rms_in  = rms(amp_inside_ic2)
+rms_out = rms(amp_outside_ic2)
 contrast = rms_in / (rms_out + 1e-30)
 
 mark('wavefield_illuminates_anomaly', rms_in > 1e-30,
-     f'RMS inside ellipse (IC1) = {rms_in:.3e}')
+     f'RMS inside anomaly (IC2) = {rms_in:.3e}')
 mark('wavefield_contrast', contrast > 0.01,
      f'RMS_in/RMS_out = {contrast:.3f}  (should be > 0.01)')
 
@@ -225,10 +226,10 @@ X_SEIS_KM   = X_SEIS_M / 1000.0
 x_cov_min   = X_SEIS_KM.min()
 x_cov_max   = X_SEIS_KM.max()
 
-covers_anomaly_x = x_cov_min <= ELL_CX - ELL_RX and x_cov_max >= ELL_CX + ELL_RX
+covers_anomaly_x = x_cov_min <= REC_X_ST and x_cov_max >= REC_X_FI
 mark('receivers_cover_anomaly_x', covers_anomaly_x,
      f'Receivers x=[{x_cov_min:.3f},{x_cov_max:.3f}] km  |  '
-     f'Anomaly x=[{ELL_CX-ELL_RX:.3f},{ELL_CX+ELL_RX:.3f}] km')
+     f'Anomaly x=[{REC_X_ST:.3f},{REC_X_FI:.3f}] km')
 
 z_rec_km = z_seis_phys
 mark('receiver_depth', z_rec_km < az - 0.05,
@@ -312,10 +313,10 @@ ax1 = axes[0, 0]
 U1 = np.sqrt(U_ini1x**2 + U_ini1z**2).reshape(xx_g.shape) / s
 c1 = ax1.contourf(xx_g*Lx, zz_g*Lz, U1, 50, cmap='jet')
 plt.colorbar(c1, ax=ax1, label='Norm. amplitude')
-# Эллипс аномалии
-ell = mpatches.Ellipse((ELL_CX, ELL_CZ), 2*ELL_RX, 2*ELL_RZ,
-                       fill=False, edgecolor='white', linewidth=2, linestyle='--')
-ax1.add_patch(ell)
+# Прямоугольник аномалии
+rect1 = mpatches.Rectangle((REC_X_ST, REC_Z_ST), REC_X_FI - REC_X_ST, REC_Z_FI - REC_Z_ST,
+                            fill=False, edgecolor='white', linewidth=2, linestyle='--')
+ax1.add_patch(rect1)
 ax1.set_title(f'IC1 Total Displacement (t={t_ic1} s)')
 ax1.set_xlabel('x (km)'); ax1.set_ylabel('z (km)')
 ax1.set_xlim(0, ax); ax1.set_ylim(0, az)
@@ -325,9 +326,9 @@ ax2 = axes[0, 1]
 U2 = np.sqrt(U_ini2x**2 + U_ini2z**2).reshape(xx_g.shape) / s
 c2 = ax2.contourf(xx_g*Lx, zz_g*Lz, U2, 50, cmap='jet')
 plt.colorbar(c2, ax=ax2, label='Norm. amplitude')
-ell2 = mpatches.Ellipse((ELL_CX, ELL_CZ), 2*ELL_RX, 2*ELL_RZ,
-                        fill=False, edgecolor='white', linewidth=2, linestyle='--')
-ax2.add_patch(ell2)
+rect2 = mpatches.Rectangle((REC_X_ST, REC_Z_ST), REC_X_FI - REC_X_ST, REC_Z_FI - REC_Z_ST,
+                            fill=False, edgecolor='white', linewidth=2, linestyle='--')
+ax2.add_patch(rect2)
 ax2.plot(X_SEIS_KM, z_seis_phys * np.ones(n_seis), 'r*', ms=6, label='Receivers')
 ax2.set_title(f'IC2 Total Displacement (t={t_ic2} s)')
 ax2.set_xlabel('x (km)'); ax2.set_ylabel('z (km)')
@@ -337,7 +338,8 @@ ax2.legend(fontsize=8)
 # Plot 3: True velocity model
 ax3 = axes[0, 2]
 xp = xxzzs[:,0]*Lx; zp = xxzzs[:,1]*Lz
-alpha_true = np.where(((xp-ELL_CX)**2/ELL_RX**2 + (zp-ELL_CZ)**2/ELL_RZ**2) <= 1.0,
+alpha_true = np.where((xp >= REC_X_ST) & (xp <= REC_X_FI) & \
+                      (zp >= REC_Z_ST) & (zp <= REC_Z_FI),
                       ALPHA_ANOM, ALPHA_BG)
 c3 = ax3.contourf(xx_g*Lx, zz_g*Lz, alpha_true.reshape(xx_g.shape), 50, cmap='RdBu_r')
 plt.colorbar(c3, ax=ax3, label='km/s')
@@ -373,9 +375,9 @@ ax6 = axes[1, 2]
 Ut = np.sqrt(U_specx**2 + U_specz**2).reshape(xx_g.shape) / s
 c6 = ax6.contourf(xx_g*Lx, zz_g*Lz, Ut, 50, cmap='jet')
 plt.colorbar(c6, ax=ax6, label='Norm. amplitude')
-ell6 = mpatches.Ellipse((ELL_CX, ELL_CZ), 2*ELL_RX, 2*ELL_RZ,
-                         fill=False, edgecolor='white', linewidth=2, linestyle='--')
-ax6.add_patch(ell6)
+rect6 = mpatches.Rectangle((REC_X_ST, REC_Z_ST), REC_X_FI - REC_X_ST, REC_Z_FI - REC_Z_ST,
+                            fill=False, edgecolor='white', linewidth=2, linestyle='--')
+ax6.add_patch(rect6)
 ax6.set_title(f'Test Wavefield (t={t_la} s)')
 ax6.set_xlabel('x (km)'); ax6.set_ylabel('z (km)')
 ax6.set_xlim(0, ax); ax6.set_ylim(0, az)
@@ -390,10 +392,11 @@ print(f"  Saved: {out}")
 fig2, ax_ = plt.subplots(1, 2, figsize=(12, 5))
 fig2.suptitle('Anomaly Cross-Sections for Recoverability Assessment', fontsize=12)
 
-# Вертикальный профиль (через x=ELL_CX)
+# Вертикальный профиль (через x=0.75)
 z_line = np.linspace(0, az, 200)
-x_line = np.full_like(z_line, ELL_CX)
-inside_z = ((x_line-ELL_CX)**2/ELL_RX**2 + (z_line-ELL_CZ)**2/ELL_RZ**2) <= 1.0
+x_line = np.full_like(z_line, 0.75)
+inside_z = (x_line >= REC_X_ST) & (x_line <= REC_X_FI) & \
+           (z_line >= REC_Z_ST) & (z_line <= REC_Z_FI)
 alpha_z   = np.where(inside_z, ALPHA_ANOM, ALPHA_BG)
 ax_[0].plot(alpha_z, z_line, 'b-', linewidth=2, label='True α(x=0.75)')
 ax_[0].axvline(ALPHA_BG - 1.0, color='r', linestyle='--', label='AlphaNet min (new)')
@@ -405,10 +408,11 @@ ax_[0].set_title('Vertical Profile Through Anomaly Center')
 ax_[0].legend(fontsize=8); ax_[0].grid(True, alpha=0.3)
 ax_[0].invert_yaxis()
 
-# Горизонтальный профиль (через z=ELL_CZ)
+# Горизонтальный профиль (через z=0.25)
 x_line2 = np.linspace(0, ax, 300)
-z_line2  = np.full_like(x_line2, ELL_CZ)
-inside_x  = ((x_line2-ELL_CX)**2/ELL_RX**2 + (z_line2-ELL_CZ)**2/ELL_RZ**2) <= 1.0
+z_line2  = np.full_like(x_line2, 0.25)
+inside_x  = (x_line2 >= REC_X_ST) & (x_line2 <= REC_X_FI) & \
+            (z_line2 >= REC_Z_ST) & (z_line2 <= REC_Z_FI)
 alpha_x   = np.where(inside_x, ALPHA_ANOM, ALPHA_BG)
 ax_[1].plot(x_line2, alpha_x, 'b-', linewidth=2, label='True α(z=0.25)')
 ax_[1].axhline(ALPHA_BG - 1.0, color='r', linestyle='--', label='AlphaNet min (new)')
