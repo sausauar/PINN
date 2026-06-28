@@ -1,0 +1,28 @@
+{
+  "num_epochs": 20000,
+  "batch_size": 8000,
+  "n_pde_total": 60000,
+  "chunk_size": 8000,
+  "warmup_epochs": 300,
+  "log_every": 100,
+  "plot_every": 400,
+  "detailed_every": 800,
+  "checkpoint_every": 400,
+  "loss_weights": {
+    "w_pde": 0.05,
+    "w_ic": 1.0,
+    "w_seis": 1.2,
+    "w_bc": 0.15
+  },
+  "normalization": {
+    "target_scale": "global_max_abs",
+    "disp_scale": 0.9982461984,
+    "applies_to": [
+      "U_ini1",
+      "U_ini2",
+      "U_spec",
+      "Sx",
+      "Sz"
+    ]
+  }
+}
